@@ -123,4 +123,4 @@ and ship as a packaged product.
 
 ## License
 
-To be added (MIT planned).
+MIT — see [LICENSE](LICENSE).
