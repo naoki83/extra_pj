@@ -11,14 +11,7 @@ from config import (
 )
 
 
-def main():
-    if not ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY is empty. Set it in .env")
-
-    with open(PROMPTS_PATH) as f:
-        prompt = json.loads(f.readline())
-
-    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+def call_anthropic(prompt_text):
     error = None
     elapsed_ms = None
     input_tokens = None
@@ -38,7 +31,7 @@ def main():
             json={
                 "model": MODEL,
                 "max_tokens": MAX_TOKENS,
-                "messages": [{"role": "user", "content": prompt["text"]}],
+                "messages": [{"role": "user", "content": prompt_text}],
             },
             timeout=TIMEOUT,
         )
@@ -54,33 +47,67 @@ def main():
             elapsed_ms = (time.perf_counter() - t0) * 1000
         error = f"{type(e).__name__}: {e}"
 
+    return {
+        "elapsed_ms": elapsed_ms,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "output_text": output_text,
+        "output_hash": output_hash,
+        "error": error,
+    }
+
+
+def main():
+    if not ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY is empty. Set it in .env")
+
+    with open(PROMPTS_PATH) as f:
+        prompts = [json.loads(line) for line in f if line.strip()]
+
+    if not prompts:
+        raise RuntimeError(f"No prompts found in {PROMPTS_PATH}")
+
     conn = sqlite3.connect(DB_PATH)
-    conn.execute(
-        """
-        INSERT INTO observations
-        (ts, provider, model, prompt_id, elapsed_ms,
-         input_tokens, output_tokens, output_text, output_hash, error)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (ts, "anthropic", MODEL, prompt["id"], elapsed_ms,
-         input_tokens, output_tokens, output_text, output_hash, error),
-    )
-    conn.commit()
+    n_errors = 0
+    sum_elapsed = 0.0
+    sum_in = 0
+    sum_out = 0
+    last_ts = None
+
+    for prompt in prompts:
+        ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        last_ts = ts
+        result = call_anthropic(prompt["text"])
+
+        conn.execute(
+            """
+            INSERT INTO observations
+            (ts, provider, model, prompt_id, elapsed_ms,
+             input_tokens, output_tokens, output_text, output_hash, error)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (ts, "anthropic", MODEL, prompt["id"], result["elapsed_ms"],
+             result["input_tokens"], result["output_tokens"],
+             result["output_text"], result["output_hash"], result["error"]),
+        )
+        conn.commit()
+
+        if result["error"]:
+            n_errors += 1
+        else:
+            sum_elapsed += result["elapsed_ms"]
+            sum_in += result["input_tokens"] or 0
+            sum_out += result["output_tokens"] or 0
 
     row_count = conn.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
-    last = conn.execute(
-        "SELECT ts, elapsed_ms, input_tokens, output_tokens, output_hash, error "
-        "FROM observations ORDER BY id DESC LIMIT 1"
-    ).fetchone()
     conn.close()
 
-    print(f"ts:             {last[0]}")
-    print(f"elapsed_ms:     {last[1]}")
-    print(f"input_tokens:   {last[2]}")
-    print(f"output_tokens:  {last[3]}")
-    print(f"output_hash:    {last[4]}")
-    print(f"error:          {last[5]}")
-    print(f"total_rows:     {row_count}")
+    print(f"ts:              {last_ts}")
+    print(f"prompts:         {len(prompts)}")
+    print(f"errors:          {n_errors}/{len(prompts)}")
+    print(f"elapsed_ms_sum:  {sum_elapsed:.1f}")
+    print(f"tokens (in/out): {sum_in} / {sum_out}")
+    print(f"total_rows:      {row_count}")
 
 
 if __name__ == "__main__":

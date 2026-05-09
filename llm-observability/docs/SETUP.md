@@ -88,20 +88,19 @@ cd src
 python observability.py
 ```
 
-Expected output:
+Expected output (5 prompts in the v1 set):
 
 ```
-ts:             2026-05-07T14:32:18+00:00
-elapsed_ms:     1428.31
-input_tokens:   168
-output_tokens:  82
-output_hash:    a3f1b9c4e2d57081
-error:          None
-total_rows:     1
+ts:              2026-05-07T14:32:18+00:00
+prompts:         5
+errors:          0/5
+elapsed_ms_sum:  6480.2
+tokens (in/out): 1850 / 290
+total_rows:      5
 ```
 
-If `error: None` and `total_rows: 1` (or higher if you ran more than
-once), the runner works.
+If `errors: 0/5` and `total_rows` is 5 or higher (depending on prior runs),
+the runner works. One row is inserted per prompt per invocation.
 
 ## 7. Schedule hourly runs
 
@@ -155,14 +154,15 @@ After 24+ hours of scheduling:
 sqlite3 data/observations.db "SELECT COUNT(*) FROM observations"
 ```
 
-Should return roughly 24 (give or take depending on when you started).
+Should return roughly 24 × N (where N is the number of prompts in the
+configured set), give or take depending on when you started.
 
 ```
-sqlite3 data/observations.db "SELECT ts, elapsed_ms, output_tokens, error FROM observations ORDER BY id DESC LIMIT 10"
+sqlite3 data/observations.db "SELECT ts, prompt_id, elapsed_ms, output_tokens, error FROM observations ORDER BY id DESC LIMIT 15"
 ```
 
 All recent rows should have `error` empty (NULL). `elapsed_ms` typically
-1500–3500. `output_tokens` typically 40–120 (varies with model behavior).
+500–3500 depending on the prompt. `output_tokens` varies by prompt.
 
 ## Troubleshooting
 

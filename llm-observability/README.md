@@ -6,8 +6,8 @@ SaaS, no surprises.
 
 ## What it does
 
-Calls the Anthropic API on a fixed prompt at a regular interval (hourly via
-cron / Task Scheduler) and records:
+Calls the Anthropic API on a small fixed prompt set at a regular interval
+(hourly via cron / Task Scheduler) and records, per call:
 
 - `ts` (UTC, second precision)
 - `provider`, `model`, `prompt_id`
@@ -24,7 +24,7 @@ Each call is one row. Append-only. The point is the time series.
 - No alerting, no notifications
 - No real-time anything
 - No multi-provider orchestration *(current build: Anthropic only)*
-- No prompt sweeping *(1 fixed prompt, intentionally)*
+- No prompt sweeping *(small fixed prompt set, intentionally)*
 - No analytics layer
 - No SaaS, no hosted version, no auth
 
@@ -42,18 +42,19 @@ visible if you keep the time series long enough.
 
 ## Status
 
-- Version: `v0.1.0-pre` (pre-release; product polish underway)
+- Version: `v0.1.0-pre` (early; subject to change)
 - Provider: Anthropic
 - Model: `claude-haiku-4-5`
-- Prompts: 1 (`summarize_v1`)
+- Prompts: 5 (`summarize_v1`, `arithmetic_v1`, `codegen_python_v1`, `tool_use_v1`, `long_context_v1`)
 - Storage: SQLite, single file, append-only
 - Schedule: hourly (cron / Task Scheduler), operator-managed
-- LOC: ~100 (excluding schema and prompt)
+- LOC: ~120 (excluding schema and prompts)
 
 ## Cost
 
-Approximately **$0.05–$0.15 per day** in Anthropic API charges at hourly
-cadence with the default prompt. Verify against current Anthropic pricing.
+Approximately **$0.05–$0.20 per day** in Anthropic API charges at hourly
+cadence with the v1 prompt set (5 prompts including one ~600-token
+long-context prompt). Verify against current Anthropic pricing.
 
 ## Quickstart
 
@@ -73,7 +74,7 @@ cd src
 python observability.py
 ```
 
-A successful first run prints a summary and inserts one row.
+A successful first run prints a summary and inserts one row per prompt.
 
 ## Verifying continuity
 
@@ -81,10 +82,11 @@ After scheduling hourly runs, count rows after 24 hours:
 
 ```bash
 sqlite3 data/observations.db "SELECT COUNT(*) FROM observations"
-sqlite3 data/observations.db "SELECT ts, elapsed_ms, output_tokens, error FROM observations ORDER BY id DESC LIMIT 5"
+sqlite3 data/observations.db "SELECT ts, prompt_id, elapsed_ms, output_tokens, error FROM observations ORDER BY id DESC LIMIT 10"
 ```
 
-Should be roughly 24 rows after a full day, all with `error` NULL.
+Should be roughly 24 × N rows after a full day (where N is the number of
+prompts), all with `error` NULL. Rows are written per (tick × prompt).
 
 ## File layout
 
@@ -96,7 +98,8 @@ llm-observability/
 ├── requirements.txt
 ├── schema.sql
 ├── prompts/
-│   └── v0.jsonl              # the one fixed prompt
+│   ├── v0.jsonl              # historical, single prompt
+│   └── v1.jsonl              # current, 5 prompts
 ├── src/
 │   ├── config.py
 │   └── observability.py      # the runner
