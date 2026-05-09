@@ -42,7 +42,7 @@ visible if you keep the time series long enough.
 
 ## Status
 
-- Version: `v0.1.0-pre` (pre-release; product polish underway)
+- Version: `v0.1.0-pre` (early; subject to change)
 - Provider: Anthropic
 - Model: `claude-haiku-4-5`
 - Prompts: 1 (`summarize_v1`)

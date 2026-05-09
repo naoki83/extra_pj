@@ -33,7 +33,7 @@ while read local_ref local_sha remote_ref remote_sha; do
         files=$(git diff --name-only "$remote_sha" "$local_sha")
     fi
 
-    bad=$(echo "$files" | grep -E "$forbidden" || true)
+    bad=$(echo "$files" | grep -iE "$forbidden" || true)
     if [ -n "$bad" ]; then
         echo "ERROR: pre-push: forbidden filename pattern detected:"
         echo "$bad" | sed 's/^/  /'
