@@ -185,9 +185,8 @@ Section 7 (scheduling) adds 3–5 minutes. Section 8 (verify) requires
 
 ## What's not in this guide
 
-- Multi-provider setup (Phase 2)
-- Anomaly detection (out of scope for v0.1.0)
+- Multi-provider setup (out of scope)
+- Anomaly detection (out of scope)
 - Dashboard / visualization (intentionally not provided)
-- Cost reconciliation (Phase 2 product)
 - CI / Docker / cloud deployment (community contributions welcome,
   not maintained by the operator)

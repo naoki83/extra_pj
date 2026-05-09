@@ -115,12 +115,6 @@ distributed in this repo; you generate your own by running.
 - reproducibility over polish
 - silence over dashboards
 
-## Roadmap
-
-Future versions may extend the prompt set and add OpenAI / Google as
-additional providers. Current focus: maintain the Anthropic time series
-and ship as a packaged product.
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
