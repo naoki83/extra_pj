@@ -26,9 +26,7 @@ it does, what it doesn't, and how to reproduce it in 10 minutes.
 
 ```
 extra_pj/
-├── COMPOUND_SYSTEM_ARCHITECTURE.md   # long-term scope and anti-patterns
-├── PRODUCT_V1.md                     # current product scope (frozen)
-└── llm-observability/                # current project source
+└── llm-observability/   # current project source
 ```
 
 ## License
